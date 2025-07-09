@@ -13,7 +13,7 @@ selected_country = st.sidebar.selectbox("Country", list(COUNTRY_CODES.keys()))
 country_code = COUNTRY_CODES[selected_country]
 
 job_title = st.sidebar.text_input("Job Title", value="Data Scientist")
-location = st.sidebar.text_input("Location", value="Sydney")  # Should be a valid city
+location = st.sidebar.text_input("Location", value="Bangalore")  # Should be a valid city
 
 # --- Cleaning Functions ---
 def clean_text(text):
