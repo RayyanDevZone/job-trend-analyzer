@@ -45,7 +45,7 @@ def fetch_jobs_live(query, location, page=1):
     return pd.DataFrame(parsed)
 
 # --- Streamlit UI ---
-st.title("🌍 Live Job Trends Search (Adzuna API)")
+st.title("🌍 Live Job Trends Search")
 
 # --- Sidebar input ---
 job_title = st.sidebar.text_input("Job Title", value="Data Scientist")
@@ -64,7 +64,9 @@ if st.sidebar.button("Search Jobs"):
         st.bar_chart(skill_counts)
 
         # Make clickable links
-        df['Apply'] = df['redirect_url'].apply(lambda url: f"[Apply Link]({url})")
+        df['Apply'] = df['redirect_url'].apply(lambda url: f'<a href="{url}" target="_blank">Apply</a>')
+        df['skills_found'] = df['skills_found'].apply(lambda x: ', '.join(x[:4]) + ('...' if len(x) > 4 else ''))
+
         st.write(
             df[['title', 'company', 'location', 'created', 'skills_found', 'Apply']].to_html(escape=False, index=False),
             unsafe_allow_html=True
