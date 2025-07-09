@@ -1,9 +1,10 @@
 import requests
 import pandas as pd
-from config import APP_ID, APP_KEY, COUNTRY, DEFAULT_QUERY, DEFAULT_LOCATION
+import argparse
+from config import APP_ID, APP_KEY, DEFAULT_QUERY, DEFAULT_LOCATION
 
-def fetch_jobs(query=DEFAULT_QUERY, location=DEFAULT_LOCATION, page=1):
-    url = f"https://api.adzuna.com/v1/api/jobs/{COUNTRY}/search/{page}"
+def fetch_jobs(query=DEFAULT_QUERY, location=DEFAULT_LOCATION, country_code="in", page=1):
+    url = f"https://api.adzuna.com/v1/api/jobs/{country_code}/search/{page}"
     params = {
         "app_id": APP_ID,
         "app_key": APP_KEY,
@@ -15,8 +16,7 @@ def fetch_jobs(query=DEFAULT_QUERY, location=DEFAULT_LOCATION, page=1):
 
     response = requests.get(url, params=params)
     data = response.json()
-    
-    # Parse response into list of jobs
+
     jobs = data.get("results", [])
     parsed = []
     for job in jobs:
@@ -31,11 +31,17 @@ def fetch_jobs(query=DEFAULT_QUERY, location=DEFAULT_LOCATION, page=1):
             'category': job.get('category', {}).get('label'),
             'salary_predicted': job.get('salary_is_predicted')
         })
-    
+
     df = pd.DataFrame(parsed)
     df.to_csv("jobs_data.csv", index=False)
-    print("Jobs saved to jobs_data.csv")
+    print(f"✅ {len(df)} jobs saved to jobs_data.csv for {query} in {location} ({country_code.upper()})")
 
-# If you want to run directly:
+# Command-line usage
 if __name__ == "__main__":
-    fetch_jobs()
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--query", default=DEFAULT_QUERY, help="Job title to search")
+    parser.add_argument("--location", default=DEFAULT_LOCATION, help="City or location name")
+    parser.add_argument("--country", default="in", help="2-letter country code (e.g., 'in', 'us', 'au')")
+    args = parser.parse_args()
+
+    fetch_jobs(query=args.query, location=args.location, country_code=args.country)

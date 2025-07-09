@@ -2,7 +2,18 @@ import streamlit as st
 import pandas as pd
 import requests
 import re
-from config import APP_ID, APP_KEY, COUNTRY, SKILLS_LIST
+from config import APP_ID, APP_KEY, COUNTRY_CODES, SKILLS_LIST
+
+# --- Streamlit UI ---
+st.set_page_config(page_title="Live Job Trends", layout="wide")
+st.title("🌍 Live Job Trends Search")
+
+# --- Sidebar input ---
+selected_country = st.sidebar.selectbox("Country", list(COUNTRY_CODES.keys()))
+country_code = COUNTRY_CODES[selected_country]
+
+job_title = st.sidebar.text_input("Job Title", value="Data Scientist")
+location = st.sidebar.text_input("Location", value="Sydney")  # Should be a valid city
 
 # --- Cleaning Functions ---
 def clean_text(text):
@@ -15,8 +26,8 @@ def extract_skills(text):
     return [skill for skill in SKILLS_LIST if skill in text]
 
 # --- Fetch Data from Adzuna API ---
-def fetch_jobs_live(query, location, page=1):
-    url = f"https://api.adzuna.com/v1/api/jobs/{COUNTRY}/search/{page}"
+def fetch_jobs_live(query, location, country_code, page=1):
+    url = f"https://api.adzuna.com/v1/api/jobs/{country_code}/search/{page}"
     params = {
         "app_id": APP_ID,
         "app_key": APP_KEY,
@@ -44,40 +55,28 @@ def fetch_jobs_live(query, location, page=1):
     
     return pd.DataFrame(parsed)
 
-# --- Streamlit UI ---
-st.title("🌍 Live Job Trends Search")
-
-# --- Sidebar input ---
-job_title = st.sidebar.text_input("Job Title", value="Data Scientist")
-location = st.sidebar.text_input("Location", value="Bangalore")
-
+# --- Button Trigger ---
 if st.sidebar.button("Search Jobs"):
     with st.spinner("Fetching live data..."):
-        df = fetch_jobs_live(job_title, location)
+        df = fetch_jobs_live(job_title, location, country_code)
 
     if not df.empty:
         st.success(f"{len(df)} jobs found.")
-        
-        # Plot skills
+
+        # Plot top skills
         all_skills = sum(df['Skills Found'], [])
         skill_counts = pd.Series(all_skills).value_counts().head(10)
         st.bar_chart(skill_counts)
 
-        # Format columns
+        # Format & display table
         df['Apply'] = df['redirect_url'].apply(lambda url: f'<a href="{url}" target="_blank">Apply</a>')
         df['Skills Found'] = df['Skills Found'].apply(lambda x: ', '.join(x[:4]) + ('...' if len(x) > 4 else ''))
         df['Created'] = pd.to_datetime(df['Created']).dt.date
 
-        # Display only required columns with correct names
         df_display = df[['Title', 'Company', 'Location', 'Created', 'Skills Found', 'Apply']]
+        st.markdown(df_display.to_html(escape=False, index=False), unsafe_allow_html=True)
 
-        # Render styled HTML table
-        st.markdown(
-            df_display.to_html(escape=False, index=False),
-            unsafe_allow_html=True
-        )
-
-        # Inject CSS to style specific columns
+        # Basic styling
         st.markdown("""
             <style>
             table td:nth-child(4), table th:nth-child(4) {
@@ -90,6 +89,5 @@ if st.sidebar.button("Search Jobs"):
             }
             </style>
         """, unsafe_allow_html=True)
-
     else:
-        st.warning("No results found. Try a different search.")
+        st.warning("No results found. Try a different city, job title, or country.")
